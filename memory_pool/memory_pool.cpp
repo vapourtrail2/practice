@@ -2,7 +2,7 @@
 #include <cstddef>
 #include <new>
 #include "memory_pool.h"
-//但是这版有问题就是不能给外部一个引用 不然会绕开private修改freeList_ 
+//但是这版有问题就是不能给外部一个引用 不然会绕开private修改freeList_ 11
 
 Memory_Pool::Memory_Pool(std::size_t poolsize, std::size_t blocksize)
 {

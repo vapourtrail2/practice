@@ -25,35 +25,33 @@ Memory_Pool::~Memory_Pool()
     delete[] memory_;
 }
 
-Freeblock*& Memory_Pool::allocate_Memory()
+//问题: 一次分配一个内存块，而不是在内部分配11次  2.返回分配出去的内存块地址 而不是freeList_引用
+//返回void* 提供原始内存
+//已经分配的内存用指针管理 也就是p1->block15 p2->block14... 没分配出去的用freeList_管理
+void* Memory_Pool::allocate_Memory()
 {
-    
-    if (freeList_ != nullptr)
+    if (freeList_ == nullptr)
     {
-        for (int i = 0; i < 11; i++)
-        {
-            if (freeList_ == nullptr) {//内存已经分配完毕
-                std::cout << "memory_pool is fulled" << std::endl;
-                break;
-            }
-            allocated[i] = freeList_;
-            freeList_ = freeList_->next;
-            //std::cout << "current allocated address :" << allocated[i] << std::endl;
-        }
+        return nullptr;
     }
-    return freeList_;
+    
+    //用不同的指针返回 而不是用内部的指针返回
+    Freeblock* res = freeList_;
+    freeList_ = freeList_->next;//也可以用res的指针移动 感觉
+  
+    //std::cout << "current allocated address :" << allocated[i] << std::endl;
+    return res;
 }
 
 void Memory_Pool::return_Memory(void* ptr)//好像有点问题
 {
-    for (int i = 0; i < 11; i++)
-    {
-        if (allocated[i] != nullptr) {
-            allocated[i]->next = freeList_;
-            freeList_ = allocated[i];
-            allocated[i] = nullptr;
-        }
+    if (ptr == nullptr) {
+        return;
     }
+
+    Freeblock* res = static_cast<Freeblock*>(ptr);
+    res->next = freeList_;
+    freeList_ = res;
 }
 
 int Memory_Pool::count_size(Freeblock* freeList)//这意味着函数调用时，会创建一个新的指针变量 freeList，将传入的地址复制给它。
@@ -128,12 +126,22 @@ int main()
     //delete[] memory;
 
     Memory_Pool pool(1024, 64);
-    auto &ptr= pool.allocate_Memory();//ptr是freeList_的另一个名字
-    int a =pool.count_size(ptr);
-    std::cout << "分配后的空闲链表节点个数:" << a << std::endl;
-    pool.return_Memory(&ptr);
-    int b = pool.count_size(ptr);//实参里取地址解引用他就是取地址解引用
-    std::cout << "回收后的空闲链表节点个数:" << b << std::endl;
+    void* p1 = pool.allocate_Memory();
+    void* p2 = pool.allocate_Memory();
+    void* p3 = pool.allocate_Memory();
+
+    std::cout << p1 << " " << p2 << " " << p3 << std::endl;
+
+    pool.return_Memory(p2);
+    void* p4 = pool.allocate_Memory();
+    std::cout << (p2 == p4);
+   
+    //auto &ptr= pool.allocate_Memory();//ptr是freeList_的另一个名字
+    //int a =pool.count_size(ptr);
+    //std::cout << "分配后的空闲链表节点个数:" << a << std::endl;
+    //pool.return_Memory(&ptr);
+    //int b = pool.count_size(ptr);//实参里取地址解引用他就是取地址解引用
+    //std::cout << "回收后的空闲链表节点个数:" << b << std::endl;
     
     return 0;
 }

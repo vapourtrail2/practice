@@ -24,32 +24,44 @@ struct Test
     }
 };
 
+struct alignas(32) Data
+{
+    double arr[4];
+};
+
+
 Memory_Pool::Memory_Pool(std::size_t poolsize, std::size_t blocksize):poolSize_(poolsize),blockSize_(blocksize)
 {
-    memory_ = new char[poolSize_];
     if (poolSize_ == 0 || blockSize_ == 0) {
         throw std::invalid_argument("blockSize and poolSize cannot be zero");
     }
 
     if (blockSize_ > poolSize_) {
-        throw std::invalid_argument("poolsize can not bigger than blockSize error");
+        throw std::invalid_argument("blockSize can not bigger than poolSize_ error");
     }
 
     if (blockSize_ < sizeof(Freeblock)) {
         throw std::invalid_argument("block is not big ,can not place the Freeblock");
     }
 
-    if (poolSize_ % blockSize_ != 0)
-    {
-        throw std::invalid_argument("不能被整除");
+    //if (poolSize_ % blockSize_ != 0)
+    //{
+    //    throw std::invalid_argument("不能被整除");
+    //}
+
+    if (blockSize_ % alignof(Freeblock) != 0) {
+        throw std::invalid_argument("alignment is error");
     }
 
+    memory_ = new char[poolSize_];
+
+    //除了满足内存大小 还得考虑内存地址是否满足对象的类型对齐原则
     for (size_t i = 0; i < poolSize_ / blockSize_; i++)
     {
-        char* block = memory_ + blocksize * i;//每个block指向每个块的首地址
+        char* block = memory_ + blockSize_ * i;//每个block指向每个块的首地址
         //构造链表
         Freeblock* node = new (block) Freeblock;//在当前内存块构造节点
-        freeList_count++;
+        freeCount_++;
         node->next = freeList_;
         freeList_ = node;
     }
@@ -73,7 +85,7 @@ void* Memory_Pool::allocate_Memory()
     //用不同的指针返回 而不是用内部的指针返回
     Freeblock* res = freeList_;
     freeList_ = res->next;
-    freeList_count--;
+    freeCount_--;
     res->~Freeblock();//释放block中freelist的生命周期
     //结束Freelist生命周期 ->原始空间内存等待使用  ->placement new构造业务对象，using .... ，然后析构业务对象 再调用ruturn memory ，创建对象 新的Freelist对象进入链表
     return res;
@@ -89,14 +101,14 @@ void Memory_Pool::return_Memory(void* ptr)
     //Freeblock* res = static_cast<Freeblock*>(ptr);
     Freeblock* res = new (ptr) Freeblock;//在ptr指向的地方 重新构造一个FreeBlock对象 因为对象都已经析构完了 所以需要在这个内存上新建一个fb对象 然后按照逻辑重新构造链表
     res->next = freeList_;
-    freeList_count++;
+    freeCount_++;
     freeList_ = res;
 }
 //还是可以遍历到 不过是两个指针指向一个节点，但是你如果用副本的话操作不会影响到freeList_。因为只是统计数据
 //遍历时间复杂度O(n) 现在这么改时间复杂度就是O(1)
 int Memory_Pool::count_size() const//这意味着函数调用时，会创建一个新的指针变量 freeList，将传入的地址复制给它。
 {
-    return freeList_count;
+    return freeCount_;
     //int count = 0;
     //auto ptr = freeList_;
     //while (ptr != nullptr)
@@ -182,23 +194,23 @@ int main()
     //obj->~Test();
     //pool.return_Memory(p);
 
-     try
-     {
-         Memory_Pool pool(1024, 0);
-     }
-     catch (const std::invalid_argument& e)
-     {
-         std::cout << "参数错误" << e.what() << std::endl;
-     }
+    try
+    {
+        Memory_Pool pool(1024, 0);
+    }
+    catch (const std::invalid_argument& e)
+    {
+        std::cout << "参数错误" << e.what() << std::endl;
+    }
    
-     try
-     {
-         Memory_Pool pool(1000, 64);
-     }
-     catch (const std::invalid_argument& e)
-     {
-         std::cout << "参数错误" << e.what() << std::endl;
-     }
+    //try
+     //{
+     //    Memory_Pool pool(1000, 64);
+     //}
+     //catch (const std::invalid_argument& e)
+     //{
+     //    std::cout << "参数错误" << e.what() << std::endl;
+     //}
 
     try
     {
@@ -208,6 +220,16 @@ int main()
     {
         std::cout << "参数错误" << e.what() << std::endl;
     }
+    try
+    {
+        Memory_Pool pool(1024, 10);
+    }
+    catch (const std::invalid_argument& e)
+    {
+        std::cout << "参数错误" << e.what() << std::endl;
+    }
+
+    
     //auto &ptr= pool.allocate_Memory();//ptr是freeList_的另一个名字
     //int a =pool.count_size(ptr);
     //std::cout << "分配后的空闲链表节点个数:" << a << std::endl;

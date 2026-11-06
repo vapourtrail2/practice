@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
-VisualStudioVersion = 18.6.11822.322 stable
+VisualStudioVersion = 18.6.11822.322
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "callback_test", "test_callback\test_callback.vcxproj", "{277C3FBE-67CC-471B-8760-2FA2DEAFCEAB}"
 EndProject
@@ -46,6 +46,8 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lambdaAndFunction_test", "lambdaAndFunction_test\lambdaAndFunction_test.vcxproj", "{4C1BC611-2261-4971-8A17-B02DB8273DC7}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "memory_pool", "memory_pool\memory_pool.vcxproj", "{94D5B8E9-CAA6-4301-8F97-7BB59821CB78}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test_fuctional", "test_fuctional\test_fuctional.vcxproj", "{A195E5DB-29DD-4D72-8DFD-94904E7602BD}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -231,6 +233,14 @@ Global
 		{94D5B8E9-CAA6-4301-8F97-7BB59821CB78}.Release|x64.Build.0 = Release|x64
 		{94D5B8E9-CAA6-4301-8F97-7BB59821CB78}.Release|x86.ActiveCfg = Release|Win32
 		{94D5B8E9-CAA6-4301-8F97-7BB59821CB78}.Release|x86.Build.0 = Release|Win32
+		{A195E5DB-29DD-4D72-8DFD-94904E7602BD}.Debug|x64.ActiveCfg = Debug|x64
+		{A195E5DB-29DD-4D72-8DFD-94904E7602BD}.Debug|x64.Build.0 = Debug|x64
+		{A195E5DB-29DD-4D72-8DFD-94904E7602BD}.Debug|x86.ActiveCfg = Debug|Win32
+		{A195E5DB-29DD-4D72-8DFD-94904E7602BD}.Debug|x86.Build.0 = Debug|Win32
+		{A195E5DB-29DD-4D72-8DFD-94904E7602BD}.Release|x64.ActiveCfg = Release|x64
+		{A195E5DB-29DD-4D72-8DFD-94904E7602BD}.Release|x64.Build.0 = Release|x64
+		{A195E5DB-29DD-4D72-8DFD-94904E7602BD}.Release|x86.ActiveCfg = Release|Win32
+		{A195E5DB-29DD-4D72-8DFD-94904E7602BD}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

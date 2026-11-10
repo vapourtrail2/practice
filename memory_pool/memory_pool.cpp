@@ -29,19 +29,27 @@ struct alignas(32) Data
     double arr[4];
 };
 
-
-Memory_Pool::Memory_Pool(std::size_t poolsize, std::size_t blocksize):poolSize_(poolsize),blockSize_(blocksize)
+Memory_Pool::Memory_Pool(std::size_t poolsize, std::size_t blocksize, std::size_t alignsize) :poolSize_(poolsize), blockSize_(blocksize), alignSize_(alignsize)
 {
     if (poolSize_ == 0 || blockSize_ == 0) {
         throw std::invalid_argument("blockSize and poolSize cannot be zero");
     }
 
     if (blockSize_ > poolSize_) {
-        throw std::invalid_argument("blockSize can not bigger than poolSize_ error");
+        throw std::invalid_argument("blockSize can not bigger than poolSize error");
     }
 
     if (blockSize_ < sizeof(Freeblock)) {
         throw std::invalid_argument("block is not big ,can not place the Freeblock");
+    }
+
+    if (alignSize_ < alignof(Freeblock)) {
+        throw std::invalid_argument("alignment too small ");
+    }
+
+    //alignment非2的正整数次幂
+    if (alignSize_ == 0 ||( alignSize_  &(alignSize_ - 1)) != 0) {
+        throw std::invalid_argument("invalid alignment");
     }
 
     //if (poolSize_ % blockSize_ != 0)
@@ -49,14 +57,15 @@ Memory_Pool::Memory_Pool(std::size_t poolsize, std::size_t blocksize):poolSize_(
     //    throw std::invalid_argument("不能被整除");
     //}
 
-    if (blockSize_ % alignof(Freeblock) != 0) {
-        throw std::invalid_argument("alignment is error");
+    if (blockSize_% alignSize_ != 0) {
+        throw std::invalid_argument("blockSize is not alignment");
     }
-
-    memory_ = new char[poolSize_];
-
+    //状态容器放在前面有好处就是。如果放在前面抛异常 不会造成 new的内存泄露。如果是new抛异常 ，那么容器会自己析构
+    is_address_ptr_used.assign(blockCount_, 0);//记录状态
+    memory_ = static_cast<char*>(operator new(poolSize_, std::align_val_t{ alignSize_ }));
+    
     //除了满足内存大小 还得考虑内存地址是否满足对象的类型对齐原则
-    for (size_t i = 0; i < poolSize_ / blockSize_; i++)
+    for (size_t i = 0; i < blockCount_; i++)
     {
         char* block = memory_ + blockSize_ * i;//每个block指向每个块的首地址
         //构造链表
@@ -69,7 +78,7 @@ Memory_Pool::Memory_Pool(std::size_t poolsize, std::size_t blocksize):poolSize_(
 
 Memory_Pool::~Memory_Pool()
 {
-    delete[] memory_;
+    operator delete(memory_,std::align_val_t(alignSize_));
 }
 
 //问题: 一次分配一个内存块，而不是在内部分配11次  2.返回分配出去的内存块地址 而不是freeList_引用
@@ -81,10 +90,24 @@ void* Memory_Pool::allocate_Memory()
     {
         return nullptr;
     }
+
+    //记录当前空闲链表头对应的block编号
+    std::size_t index = 0;
+    
+    if (!isMemoryPtr(freeList_,index))
+    {
+        throw std::logic_error("freelist is bad");
+    }
+
+    if (is_address_ptr_used[index] != 0) {
+        throw std::logic_error("is_address_ptr_used has been used");
+    }
     
     //用不同的指针返回 而不是用内部的指针返回
     Freeblock* res = freeList_;
     freeList_ = res->next;
+
+    is_address_ptr_used[index] = 1;
     freeCount_--;
     res->~Freeblock();//释放block中freelist的生命周期
     //结束Freelist生命周期 ->原始空间内存等待使用  ->placement new构造业务对象，using .... ，然后析构业务对象 再调用ruturn memory ，创建对象 新的Freelist对象进入链表
@@ -98,9 +121,21 @@ void Memory_Pool::return_Memory(void* ptr)
         return;
     }
 
+    std::size_t index = 0;
+    if (!isMemoryPtr(ptr,index))
+    {
+        throw std::logic_error("is not correct ptr");
+    }
+
+    if (is_address_ptr_used[index] == 0) {
+        throw std::logic_error("is already release the room");
+    }
+
     //Freeblock* res = static_cast<Freeblock*>(ptr);
     Freeblock* res = new (ptr) Freeblock;//在ptr指向的地方 重新构造一个FreeBlock对象 因为对象都已经析构完了 所以需要在这个内存上新建一个fb对象 然后按照逻辑重新构造链表
     res->next = freeList_;
+
+    is_address_ptr_used[index] = 0;
     freeCount_++;
     freeList_ = res;
 }
@@ -117,6 +152,32 @@ int Memory_Pool::count_size() const//这意味着函数调用时，会创建一�
     //    count++;
     //}
     //return count;
+}
+
+bool Memory_Pool::isMemoryPtr(void* p, std::size_t& index) const
+{
+    if (p == nullptr || memory_ == nullptr) {
+        return false;
+    }
+
+    std::uintptr_t base = reinterpret_cast<uintptr_t>(memory_);//内存池首地址
+    std::uintptr_t address = reinterpret_cast<uintptr_t>(p);
+    //std::uintptr_t utimate_address = reinterpret_cast<uintptr_t>(base + poolSize_);
+
+    if (address < base)
+    {
+        return false;
+    }
+    
+    auto offset = address - base;
+    if (offset%blockSize_ != 0)//必须是block的起始地址
+    {
+        return false;
+    }
+    
+    index = offset / blockSize_;
+    
+    return index < blockCount_;//存在一种情况就是1000/64 只有15个Block可以有 所以
 }
 
 //利用链表管理内存块
@@ -194,48 +255,63 @@ int main()
     //obj->~Test();
     //pool.return_Memory(p);
 
-    try
-    {
-        Memory_Pool pool(1024, 0);
-    }
-    catch (const std::invalid_argument& e)
-    {
-        std::cout << "参数错误" << e.what() << std::endl;
-    }
-   
     //try
-     //{
-     //    Memory_Pool pool(1000, 64);
-     //}
-     //catch (const std::invalid_argument& e)
-     //{
-     //    std::cout << "参数错误" << e.what() << std::endl;
-     //}
+    //{
+    //    Memory_Pool pool(1024, 0);
+    //}
+    //catch (const std::invalid_argument& e)
+    //{
+    //    std::cout << "参数错误" << e.what() << std::endl;
+    //}
+   
+    ////try
+    // //{
+    // //    Memory_Pool pool(1000, 64);
+    // //}
+    // //catch (const std::invalid_argument& e)
+    // //{
+    // //    std::cout << "参数错误" << e.what() << std::endl;
+    // //}
 
-    try
-    {
-        Memory_Pool pool(1024, 4);
-    }
-    catch (const std::invalid_argument& e)
-    {
-        std::cout << "参数错误" << e.what() << std::endl;
-    }
-    try
-    {
-        Memory_Pool pool(1024, 10);
-    }
-    catch (const std::invalid_argument& e)
-    {
-        std::cout << "参数错误" << e.what() << std::endl;
-    }
+    //try
+    //{
+    //    Memory_Pool pool(1024, 4);
+    //}
+    //catch (const std::invalid_argument& e)
+    //{
+    //    std::cout << "参数错误" << e.what() << std::endl;
+    //}
+    //try
+    //{
+    //    Memory_Pool pool(1024, 10);
+    //}
+    //catch (const std::invalid_argument& e)
+    //{
+    //    std::cout << "参数错误" << e.what() << std::endl;
+    //}
 
-    
     //auto &ptr= pool.allocate_Memory();//ptr是freeList_的另一个名字
     //int a =pool.count_size(ptr);
     //std::cout << "分配后的空闲链表节点个数:" << a << std::endl;
     //pool.return_Memory(&ptr);
     //int b = pool.count_size(ptr);//实参里取地址解引用他就是取地址解引用
     //std::cout << "回收后的空闲链表节点个数:" << b << std::endl;
-    
+
+    Memory_Pool Pool(1024, 64, 32);
+
+    //void* block[16] = {};
+    //
+    //for (int i = 0; i < 16; i++)
+    //{
+    //    block[i] = Pool.allocate_Memory();
+    //    //std::cout << block[i] << std::endl;
+    //    std::uintptr_t value = reinterpret_cast<uintptr_t>(block[i]);
+    //    std::cout << "is align?" << (value % 32 == 0) << std::endl;
+    //}
+    //for (int i = 0; i < 16; i++)
+    //{
+    //    Pool.return_Memory(block[i]);
+    //}
+
     return 0;
 }

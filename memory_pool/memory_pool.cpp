@@ -14,8 +14,9 @@
 struct Test
 {
     int v;
+    int x;
     
-    Test(int v) : v(v) {
+    Test(int v,int x) : v(v) ,x(x){
         std::cout << "construction" << std::endl;
     }
 
@@ -141,7 +142,7 @@ void Memory_Pool::return_Memory(void* ptr)
 }
 //还是可以遍历到 不过是两个指针指向一个节点，但是你如果用副本的话操作不会影响到freeList_。因为只是统计数据
 //遍历时间复杂度O(n) 现在这么改时间复杂度就是O(1)
-int Memory_Pool::count_size() const//这意味着函数调用时，会创建一个新的指针变量 freeList，将传入的地址复制给它。
+std::size_t Memory_Pool::count_size() const//这意味着函数调用时，会创建一个新的指针变量 freeList，将传入的地址复制给它。
 {
     return freeCount_;
     //int count = 0;
@@ -298,6 +299,13 @@ int main()
     //std::cout << "回收后的空闲链表节点个数:" << b << std::endl;
 
     Memory_Pool Pool(1024, 64, 32);
+
+    Test* obj = Pool.create<Test>(100,200);
+    if (obj != nullptr) {
+        std::cout << obj->v << " " << obj->x << std::endl;
+        obj->~Test();
+        Pool.return_Memory(obj); //对象也得手动释放 Pool.create<Test>(100,200);只会释放原始内存
+    }
 
     //void* block[16] = {};
     //

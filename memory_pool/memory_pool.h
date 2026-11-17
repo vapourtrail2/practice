@@ -20,7 +20,7 @@ public:
 	std::size_t count_size() const;
 	bool isMemoryPtr(void* p, std::size_t& index) const;
 	template <typename T,typename... Args>//可以推导出多个实参的多个类型
-	T* create(Args... args) {//相当于接受 int args1, int args2
+	T* create(Args... args) {//相当于接受 int args1, int args2  //这里发生一次拷贝 按值传递 虽然接受的是rvalue 但是args是有名字的变量 所以在这里他是作为左值
 
 		if (sizeof(T) > blockSize_) {
 			throw std::invalid_argument("object is too large");
@@ -37,7 +37,7 @@ public:
 		}
 		try
 		{
-			return new (p) T(args...);
+			return new (p) T(args...);//这里发生第二次拷贝
 		}
 		catch (...)
 		{

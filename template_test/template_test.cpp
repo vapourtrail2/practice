@@ -9,7 +9,7 @@ T maxNum(T a, T b) {
 
 //类模板 类模板允许定义通用的类 通过类型参数化 实现不同类型的对象
 //template <typename T>
-//class MyClass {
+//class Buffer {
 //public:
 //	T data;
 //};  

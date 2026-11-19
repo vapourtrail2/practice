@@ -11,18 +11,30 @@
 
 //new是申请一个新的动态内存 然后在这个内存上创建对象
 //placement new 是在ptr指向的地址上创建对象
-struct Test
+class Test
 {
+private:
     int v;
     int x;
-    
+public:
     Test(int v,int x) : v(v) ,x(x){
-        std::cout << "construction" << std::endl;
+        //std::cout << "construction" << std::endl;
     }
 
     ~Test() {
-        std::cout << "destruction" << std::endl;
+        //std::cout << "destruction" << std::endl;
     }
+};
+
+class Buffer {
+public:
+    Buffer(int size) :size_(size), ptr_(new int[size]) {
+        std::cout << "construction" << std::endl;
+    }
+    
+private:
+    int size_ = 0;
+    int* ptr_ = nullptr;
 };
 
 struct alignas(32) Data
@@ -61,6 +73,8 @@ Memory_Pool::Memory_Pool(std::size_t poolsize, std::size_t blocksize, std::size_
     if (blockSize_% alignSize_ != 0) {
         throw std::invalid_argument("blockSize is not alignment");
     }
+
+    blockCount_ = poolSize_ / blockSize_;
     //状态容器放在前面有好处就是。如果放在前面抛异常 不会造成 new的内存泄露。如果是new抛异常 ，那么容器会自己析构
     is_address_ptr_used.assign(blockCount_, 0);//记录状态
     memory_ = static_cast<char*>(operator new(poolSize_, std::align_val_t{ alignSize_ }));
@@ -79,7 +93,7 @@ Memory_Pool::Memory_Pool(std::size_t poolsize, std::size_t blocksize, std::size_
 
 Memory_Pool::~Memory_Pool()
 {
-    operator delete(memory_,std::align_val_t(alignSize_));
+    operator delete(memory_,std::align_val_t(alignSize_));//只释放内存 并没有释放TEst对象 
 }
 
 //问题: 一次分配一个内存块，而不是在内部分配11次  2.返回分配出去的内存块地址 而不是freeList_引用
@@ -176,9 +190,9 @@ bool Memory_Pool::isMemoryPtr(void* p, std::size_t& index) const
         return false;
     }
     
-    index = offset / blockSize_;
+    index = offset / blockSize_;//代表这个地址在第几个block 如果能整除就是正常index
     
-    return index < blockCount_;//存在一种情况就是1000/64 只有15个Block可以有 所以
+    return index < blockCount_;//存在一种情况就是1000/64 只有15个Block可以有 所以这是第index个block
 }
 
 //利用链表管理内存块
@@ -301,12 +315,16 @@ int main()
     Memory_Pool Pool(1024, 64, 32);
 
     Test* obj = Pool.create<Test>(100,200);
-    if (obj != nullptr) {
-        std::cout << obj->v << " " << obj->x << std::endl;
-        obj->~Test();
-        Pool.return_Memory(obj); //对象也得手动释放 Pool.create<Test>(100,200);只会释放原始内存
-    }
+    //if (obj != nullptr) {
+    //    //std::cout << obj->v << " " << obj->x << std::endl;
+    //    obj->~Test();
+    //    Pool.return_Memory(obj); //对象也得手动释放 Pool.create<Test>(100,200);只会释放原始内存
+    //}
+    std::cout << "first" << Pool.count_size() << std::endl;
+    Pool.destroy<Test>(obj);
 
+    std::cout <<"process last" << Pool.count_size() << std::endl;
+    
     //void* block[16] = {};
     //
     //for (int i = 0; i < 16; i++)

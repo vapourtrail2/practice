@@ -1,13 +1,17 @@
 #include <iostream>
 #include <utility>
 
+/*
+如果没有正确处理拷贝构造，可能发生浅拷贝和重复释放。
+
+如果没有正确处理移动构造，可能无法高效转移资源。
+
+如果没有正确处理析构函数，可能发生内存泄漏。*/
 class Buffer
 {
 public:
-	Buffer(int size) {
-		size_ = size;
-		ptr_ = new int[size];
-		//std::cout << "1" << std::endl;
+	Buffer(int size) :size_(size),ptr_(new int[size]){
+		std::cout << "construction" << std::endl;
 	};
 
 	Buffer(const Buffer& other) {//Buffer b = a 先创建b 然后用a初始化b 需要有一个函数接受a 初始化b
@@ -39,7 +43,7 @@ public:
 		delete[] ptr_;
 	
 		ptr_ = newPtr;
-		size_ = other.size_;
+		size_ = other.size_;	
 
 		return *this;
 	}

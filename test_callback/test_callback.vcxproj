@@ -24,7 +24,7 @@
     <ProjectGuid>{277c3fbe-67cc-471b-8760-2fa2deafceab}</ProjectGuid>
     <RootNamespace>testcallback</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
-    <ProjectName>callback_test</ProjectName>
+    <ProjectName>callback</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">

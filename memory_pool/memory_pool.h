@@ -17,8 +17,7 @@ class Memory_Pool
 public:
 	Memory_Pool(std::size_t poolsize, std::size_t blocksize,std::size_t alignsize);
 	~Memory_Pool();
-	void* allocate_Memory();
-	void return_Memory(void* ptr);
+	
 	std::size_t count_size() const;
 	
 
@@ -50,7 +49,8 @@ public:
 		try
 		{
 			T* obj = new (p) T(args...);//构造对象
-			return obj;
+			destructors_[index] = &destoryObject<T>;
+			return obj;	
 			//destructors_[index] = &callDestructor<T>;
 		}
 		catch (...)
@@ -88,17 +88,25 @@ public:
 	Memory_Pool& operator=(const Memory_Pool&) = delete;//禁止拷贝赋值运算符
 
 private:
-	//using Destructor = void(*)(void*);
+	void* allocate_Memory();
+	void return_Memory(void* ptr);
 	bool isMemoryPtr(void* p, std::size_t& index) const;
+
+	using Destructor = void(*)(void*);
+	template<typename T>
+	static void destoryObject(void* ptr) {//存进函数指针数组 需要static
+		T* obj = static_cast<T*>(ptr);	
+		obj->~T();//这里.不出来应该是没找到具体的析构函数 ，因为用的是模板 执行对应的析构函数
+	}
 
 private:
 	
 	std::size_t poolSize_;
 	std::size_t blockSize_ = 0;	
 	std::size_t alignSize_;
-	std::size_t blockCount_  = 0 ;
+	std::size_t blockCount_  = 0 ;//总共多少个block
 	std::vector<unsigned char> is_address_ptr_used;
-	//std::vector<Destructor> destructors_;//函数指针，不同类型的对象调用不同类型的析构函数
+	std::vector<Destructor> destructors_;//函数指针的容器，不同类型的对象调用不同类型的析构函数
 	char* memory_ = nullptr;
 	Freeblock* freeList_ = nullptr;
 	std::size_t freeCount_ = 0;//记录freeList里的节点数

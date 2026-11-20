@@ -23,6 +23,7 @@
     <Keyword>Win32Proj</Keyword>
     <ProjectGuid>{e0e5fe1a-9ac7-4b8d-986a-cca806c81ae1}</ProjectGuid>
     <RootNamespace>virtualfunctest</RootNamespace>
+    <ProjectName>virtual_func</ProjectName>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />

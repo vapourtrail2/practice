@@ -23,6 +23,7 @@
     <Keyword>Win32Proj</Keyword>
     <ProjectGuid>{db7a146b-bdf2-46e6-ad73-e3ebc13bd86a}</ProjectGuid>
     <RootNamespace>thistest</RootNamespace>
+    <ProjectName>this</ProjectName>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />

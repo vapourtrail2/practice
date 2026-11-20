@@ -11,6 +11,20 @@
 
 //new是申请一个新的动态内存 然后在这个内存上创建对象
 //placement new 是在ptr指向的地址上创建对象
+
+
+//这张记录卡不直接存储 Test 或 Buffer 这样的类型名称，而是保存一个函数地址。不同类型的对象需要不同的生命周期结束操作
+/*
+我们可以让内存池提前记住：
+- Block 0：以后应该执行 Test 对应的操作。
+- Block 1：以后应该执行 Buffer 对应的操作。
+- Block 2：目前没有对象。
+*/
+
+/*
+当内存池创建 Test 对象时，怎么把 Test 对应的析构函数地址存进 cleanupFunctions_
+*/
+
 class Test
 {
 private:
@@ -77,6 +91,7 @@ Memory_Pool::Memory_Pool(std::size_t poolsize, std::size_t blocksize, std::size_
     blockCount_ = poolSize_ / blockSize_;
     //状态容器放在前面有好处就是。如果放在前面抛异常 不会造成 new的内存泄露。如果是new抛异常 ，那么容器会自己析构
     is_address_ptr_used.assign(blockCount_, 0);//记录状态
+    destructors_.assign(blockCount_, nullptr);//函数指针容器初始化 
     memory_ = static_cast<char*>(operator new(poolSize_, std::align_val_t{ alignSize_ }));
     
     //除了满足内存大小 还得考虑内存地址是否满足对象的类型对齐原则
@@ -93,6 +108,14 @@ Memory_Pool::Memory_Pool(std::size_t poolsize, std::size_t blocksize, std::size_
 
 Memory_Pool::~Memory_Pool()
 {
+    //遍历block对应的地址 使用对应的析构函数
+    for (size_t i = 0; i < blockCount_; i++)
+    {
+        if (destructors_[i] != nullptr) {
+            void* ptr = memory_ + i * blockSize_;
+            destructors_[i](ptr);//动态选择函数的机制
+        }
+    }
     operator delete(memory_,std::align_val_t(alignSize_));//只释放内存 并没有释放TEst对象 
 }
 
